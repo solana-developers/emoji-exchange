@@ -22,11 +22,6 @@ export const ContentContainer: FC = props => {
               <a>Home</a>
             </Link>
           </li>
-          <li>
-            <Link href="/basics">
-              <a>Basics</a>
-            </Link>
-          </li>
         </ul>
       </div>
     </div>
