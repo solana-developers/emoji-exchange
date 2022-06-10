@@ -11,7 +11,13 @@ pub fn create_user_account(
 
 #[derive(Accounts)]
 pub struct CreateUser<'info> {
-    #[account(init, payer = wallet, space = 8 + 40)]
+    #[account(
+        init, 
+        payer = wallet, 
+        space = 8 + 40,
+        seeds = [user.key().as_ref()],
+        bump
+    )]
     pub user: Account<'info, User>,
     #[account(mut)]
     pub wallet: Signer<'info>,
@@ -26,27 +32,27 @@ pub struct User {
 
 pub fn create_user_emoji_account(
     ctx: Context<CreateUserEmoji>, 
-    authority: Pubkey, 
     balance: u64
 ) -> Result<()> {
     let user_emoji = &mut ctx.accounts.user_emoji;
-    user_emoji.authority = authority;
+    user_emoji.authority = ctx.accounts.user.key();
     user_emoji.balance = balance;
     Ok(())
 }
 
 #[derive(Accounts)]
+#[instruction(emoji_seed: String)]
 pub struct CreateUserEmoji<'info> {
     #[account(
         init, 
-        payer = wallet, 
+        payer = user, 
         space = 8 + 40,
-        seeds = ["user_emoji".as_ref()],
+        seeds = [user.key().as_ref(), "_".as_ref(), emoji_seed.as_ref()],
         bump
     )]
     pub user_emoji: Account<'info, UserEmoji>,
     #[account(mut)]
-    pub wallet: Signer<'info>,
+    pub user: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
 

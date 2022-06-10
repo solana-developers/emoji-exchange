@@ -16,24 +16,31 @@ mod emoji_exchange {
 
     pub fn create_master_emoji_account(
         ctx: Context<CreateMasterEmoji>, 
+        emoji_seed: String, 
         balance: u64
     ) -> Result<()> {
-        master::create_master_emoji_account(ctx, balance)
+        master::create_master_emoji_account(
+            ctx, emoji_seed, balance
+        )
     }
 
     pub fn create_user_account(
         ctx: Context<CreateUser>, 
         name: String
     ) -> Result<()> {
-        user::create_user_account(ctx, name)
+        user::create_user_account(
+            ctx, name
+        )
     }
 
     pub fn create_user_emoji_account(
         ctx: Context<CreateUserEmoji>, 
-        authority: Pubkey,
+        emoji_seed: String, 
         balance: u64
     ) -> Result<()> {
-        user::create_user_emoji_account(ctx, authority, balance)
+        user::create_user_emoji_account(
+            ctx, balance
+        )
     }
 
     pub fn place_order(
@@ -41,6 +48,8 @@ mod emoji_exchange {
         order_type: OrderType, 
         amount: u64
     ) -> Result<()> {
-        order::place_order(ctx, order_type, amount)
+        order::place_order(
+            ctx, order_type, amount
+        )
     }
 }
