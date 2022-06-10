@@ -48,12 +48,6 @@ export const AppBar: FC = props => {
           </div>
         </div>
 
-        {/* Nav Links */}
-        <div className="hidden md:inline md:navbar-center">
-          <div className="flex items-stretch">
-          </div>
-        </div>
-
         {/* Wallet & Settings */}
         <div className="navbar-end">
           <div className="dropdown">
