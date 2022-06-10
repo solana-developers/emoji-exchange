@@ -1,11 +1,8 @@
 import { FC, useCallback, useState } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { Order } from './Order';
 
-interface emojiProps {
-  emoji: string;
-}
-
-export const EmojiExchange: FC = (emojiProps: emojiProps) => {
+export const EmojiExchange: FC = () => {
   const { connection } = useConnection();
   const { publicKey, sendTransaction } = useWallet();
 
@@ -25,26 +22,16 @@ export const EmojiExchange: FC = (emojiProps: emojiProps) => {
 
   return (
     <div className="my-6">
-      <span>{emojiProps.emoji}</span>
       {init ? 
         <div>
-          <input 
-            type="number" 
-            className="input input-bordered max-w-xs m-2" 
-            placeholder="Amount"
-            onChange={(e) => setAmount(e.target.value)}
-          />
-          
-          <button
-            className="px-8 m-2 btn animate-pulse bg-gradient-to-r from-[#9945FF] to-[#14F195] hover:from-pink-500 hover:to-yellow-500 ..."
-            onClick={() => onClickOrder({amount: Number(amount), type: "buy"})}>
-              <span>Buy</span>
-          </button>
-          <button
-            className="px-8 m-2 btn animate-pulse bg-gradient-to-r from-[#9945FF] to-[#14F195] hover:from-pink-500 hover:to-yellow-500 ..."
-            onClick={() => onClickOrder({amount: Number(amount), type: "sell"})}>
-              <span>Sell</span>
-          </button>
+          <Order emoji="😀"/>
+          <Order emoji="👻"/>
+          <Order emoji="🤡"/> 
+          <Order emoji="🤠"/>
+          <Order emoji="💸"/>
+          <Order emoji="💪"/>
+          <Order emoji="👀"/>
+          <Order emoji="👑"/>
         </div> :
         <div>
           <input 
