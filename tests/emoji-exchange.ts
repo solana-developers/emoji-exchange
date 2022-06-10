@@ -22,78 +22,75 @@ describe("emoji-exchange", () => {
 
   it("Is initialized!", async () => {
 
+    let emojiOrderbooks = [];
+    let userEmojiAccounts = [];
+
     // TODO: Need to figure out how to do bump
 
     // Create master PDAs
-    for (var x of emojisList) {
+    for (var emojiSeed of emojisList) {
+      const [pda, _] = await anchor.web3.PublicKey
+        .findProgramAddress(
+          [Buffer.from(emojiSeed + "_" + "master_emoji")],
+          EMOJI_EXCHANGE_PROGRAM_ID
+        );
       await program.methods.createMasterEmojiAccount(
-        new anchor.BN(40) // TODO: Beginning balance
+        emojiSeed,
+        new anchor.BN(40)
       )
       .accounts({
-        masterEmoji: await anchor.web3.PublicKey
-          .createWithSeed(
-            wallet.publicKey,
-            "master_emoji",
-            EMOJI_EXCHANGE_PROGRAM_ID
-          ),
+        masterEmoji: pda,
         wallet: wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId
       })
       .rpc()
+      emojiOrderbooks.push(pda);
     }
 
     // Create user account
-    const userKeypair: anchor.web3.Keypair = anchor.web3.Keypair.generate();
+    const [userPda, _] = await anchor.web3.PublicKey
+        .findProgramAddress(
+          [wallet.publicKey.toBuffer()],
+          EMOJI_EXCHANGE_PROGRAM_ID
+        );
     await program.methods.createUserAccount(
-      "joe" // TODO: Replace with user's entered name
+      "joe"
     )
     .accounts({
-      user: userKeypair.publicKey,
+      user: userPda,
       wallet: wallet.publicKey,
       systemProgram: anchor.web3.SystemProgram.programId
     })
     .rpc();
 
     // Create user PDAs
-    for (var x of emojisList) {
+    for (var emojiSeed of emojisList) {
+      const [pda, _] = await anchor.web3.PublicKey
+        .findProgramAddress(
+          [Buffer.from(wallet.publicKey + "_" + emojiSeed)],
+          EMOJI_EXCHANGE_PROGRAM_ID
+        );
       await program.methods.createUserEmojiAccount(
-        userKeypair.publicKey, new anchor.BN(40) // TODO: Beginning balance
+        emojiSeed,
+        new anchor.BN(40)
       )
       .accounts({
-        userEmoji: await anchor.web3.PublicKey
-          .createWithSeed(
-            userKeypair.publicKey,
-            "user_emoji",
-            EMOJI_EXCHANGE_PROGRAM_ID
-          ),
-        wallet: userKeypair.publicKey,
+        userEmoji: pda,
+        user: wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId
       })
       .rpc();
+      userEmojiAccounts.push(pda);
     }
-
-    // Place orders
-    const masterEmoji1 = await anchor.web3.PublicKey
-      .createWithSeed(
-        wallet.publicKey,
-        "master_emoji", // TODO: Bump #1
-        EMOJI_EXCHANGE_PROGRAM_ID
-      );
-    const userEmoji1 = await anchor.web3.PublicKey
-    .createWithSeed(
-      wallet.publicKey,
-      "user_emoji", // TODO: Bump #1
-      EMOJI_EXCHANGE_PROGRAM_ID
-    )
 
     // Buy Emoji #1
     await program.methods.placeOrder(
       orderType.BUY, new anchor.BN(1)
     )
     .accounts({
-      masterEmoji: masterEmoji1,
-      userEmoji: userEmoji1,
-      authority: userEmoji1,
+      masterEmoji: emojiOrderbooks[0],
+      userEmoji: userEmojiAccounts[0],
+      authority: wallet.publicKey,
     })
     .rpc();
 
@@ -102,9 +99,9 @@ describe("emoji-exchange", () => {
       orderType.SELL, new anchor.BN(1)
     )
     .accounts({
-      masterEmoji: masterEmoji1,
-      userEmoji: userEmoji1,
-      authority: userEmoji1,
+      masterEmoji: emojiOrderbooks[0],
+      userEmoji: userEmojiAccounts[0],
+      authority: wallet.publicKey,
     })
     .rpc();
   });
