@@ -1,43 +1,46 @@
 use anchor_lang::prelude::*;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+pub mod master;
+pub mod order;
+pub mod user;
+
+use master::*;
+use order::*;
+use user::*;
+
+declare_id!("9WxF3Zm9G1CeTzdYxevQvH5eBYWUVjmn9mUynju5urYK");
 
 #[program]
-mod basic_2 {
+mod emoji_exchange {
     use super::*;
 
-    pub fn create(ctx: Context<Create>, authority: Pubkey) -> Result<()> {
-        let counter = &mut ctx.accounts.counter;
-        counter.authority = authority;
-        counter.count = 0;
-        Ok(())
+    pub fn create_master_emoji_account(
+        ctx: Context<CreateMasterEmoji>, 
+        balance: u64
+    ) -> Result<()> {
+        master::create_master_emoji_account(ctx, balance)
     }
 
-    pub fn increment(ctx: Context<Increment>) -> Result<()> {
-        let counter = &mut ctx.accounts.counter;
-        counter.count += 1;
-        Ok(())
+    pub fn create_user_account(
+        ctx: Context<CreateUser>, 
+        name: String
+    ) -> Result<()> {
+        user::create_user_account(ctx, name)
     }
-}
 
-#[derive(Accounts)]
-pub struct Create<'info> {
-    #[account(init, payer = user, space = 8 + 40)]
-    pub counter: Account<'info, Counter>,
-    #[account(mut)]
-    pub user: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
+    pub fn create_user_emoji_account(
+        ctx: Context<CreateUserEmoji>, 
+        authority: Pubkey,
+        balance: u64
+    ) -> Result<()> {
+        user::create_user_emoji_account(ctx, authority, balance)
+    }
 
-#[derive(Accounts)]
-pub struct Increment<'info> {
-    #[account(mut, has_one = authority)]
-    pub counter: Account<'info, Counter>,
-    pub authority: Signer<'info>,
-}
-
-#[account]
-pub struct Counter {
-    pub authority: Pubkey,
-    pub count: u64,
+    pub fn place_order(
+        ctx: Context<Order>,
+        order_type: OrderType, 
+        amount: u64
+    ) -> Result<()> {
+        order::place_order(ctx, order_type, amount)
+    }
 }
