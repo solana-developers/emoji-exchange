@@ -17,7 +17,7 @@ export const HomeView: FC = ({ }) => {
           <RequestAirdrop />
         </div>
         <div>
-          <EmojiExchange emoji={"😠"}/>
+          <EmojiExchange />
         </div>
       </div>
     </div>
