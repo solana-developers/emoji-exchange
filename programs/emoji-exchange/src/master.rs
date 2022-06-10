@@ -11,7 +11,13 @@ pub fn create_master_emoji_account(
 
 #[derive(Accounts)]
 pub struct CreateMasterEmoji<'info> {
-    #[account(init, payer = wallet, space = 8 + 40)]
+    #[account(
+        init, 
+        payer = wallet, 
+        space = 8 + 40,
+        seeds = ["master_emoji".as_ref()],
+        bump
+    )]
     pub master_emoji: Account<'info, MasterEmoji>,
     #[account(mut)]
     pub wallet: Signer<'info>,

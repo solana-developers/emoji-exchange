@@ -37,7 +37,13 @@ pub fn create_user_emoji_account(
 
 #[derive(Accounts)]
 pub struct CreateUserEmoji<'info> {
-    #[account(init, payer = wallet, space = 8 + 40)]
+    #[account(
+        init, 
+        payer = wallet, 
+        space = 8 + 40,
+        seeds = ["user_emoji".as_ref()],
+        bump
+    )]
     pub user_emoji: Account<'info, UserEmoji>,
     #[account(mut)]
     pub wallet: Signer<'info>,
