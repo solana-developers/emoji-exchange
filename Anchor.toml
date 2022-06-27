@@ -1,14 +1,14 @@
 [features]
 seeds = false
 [programs.devnet]
-emoji_exchange = "9WxF3Zm9G1CeTzdYxevQvH5eBYWUVjmn9mUynju5urYK"
+emoji_exchange = "HctzMECBUu8gg4an7RjUaBXibGEcL3WD41P33JsyqwWe"
 
 [registry]
 url = "https://anchor.projectserum.com"
 
 [provider]
 cluster = "devnet"
-wallet = "/home/joeca/.config/solana/id.json"
+wallet = "/Users/joesol/.config/solana/id.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
