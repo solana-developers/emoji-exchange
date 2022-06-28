@@ -211,7 +211,7 @@ describe("Emoji Exchange Tests", async () => {
 
     it("Testing out the PDAs", async () => {
 
-        console.log("====   Testing initializing of master PDAs            ===");
+        console.log("====   Test initialization of master PDAs            ===");
         let masterWallet = await primeNewAccount();
         for (var emoji of emojisList) {
             let pda = await derivePda(
