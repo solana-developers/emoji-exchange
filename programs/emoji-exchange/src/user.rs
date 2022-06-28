@@ -2,6 +2,57 @@ use anchor_lang::prelude::*;
 
 
 /*
+* Initialize a new PDA account to store the user's metadata
+*/
+pub fn create_user_metadata_account(
+    ctx: Context<CreateUserMetadata>, 
+    username: String,
+    authority: Pubkey,
+) -> Result<()> {
+    
+    let metadata_account = &mut ctx.accounts.metadata_account;
+    metadata_account.username = username;
+    metadata_account.authority = authority;
+    msg!("Request to create _usermetadata_ PDA {}", &metadata_account.key());
+    msg!("Success.");
+    
+    Ok(())
+}
+
+/*
+* Accounts context for creating a new metadata PDA account.
+*/
+#[derive(Accounts)]
+#[instruction(username: String)]
+pub struct CreateUserMetadata<'info> {
+    #[account(
+        init, 
+        payer = wallet, 
+        space = 82,
+        seeds = [
+            wallet.key().as_ref(),
+            b"_usermetadata_", 
+            username.as_ref()
+        ],
+        bump
+    )]
+    pub metadata_account: Account<'info, UserMetadata>,
+    #[account(mut)]
+    pub wallet: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+/*
+* Metadata PDA account data.
+*/
+#[account]
+pub struct UserMetadata {
+    pub username: String,
+    pub authority: Pubkey
+}
+
+
+/*
 * Initialize a new PDA account to store the balance of an emoji
 */
 pub fn create_user_emoji_account(

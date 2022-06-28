@@ -7,6 +7,8 @@ describe("Emoji Exchange Tests", async () => {
 
     // Store PDAs created
 
+    let usernamesList = [];
+    let userMetadataPdasList = [];
     let userPdasList = [];
     let masterPdasList = [];
 
@@ -25,6 +27,7 @@ describe("Emoji Exchange Tests", async () => {
     const masterAccountSeed = "_master_";
     const priceAccountSeed = "_price_";
     const userAccountSeed = "_user_";
+    const metadataAccountSeed = "_usermetadata_";
     const masterStartingBalance = 40;
 
     enum OrderType { 
@@ -61,13 +64,13 @@ describe("Emoji Exchange Tests", async () => {
     async function derivePda(
         walletPubkey: anchor.web3.PublicKey,
         accountTypeSeed: string,
-        emojiSeed: string,
+        diffSeed: string,
     ) {
         let [pda, _] = await anchor.web3.PublicKey.findProgramAddress(
             [
             walletPubkey.toBuffer(),
             Buffer.from(accountTypeSeed), 
-            Buffer.from(emojiSeed),
+            Buffer.from(diffSeed),
             ],
             program.programId
         );
@@ -106,6 +109,24 @@ describe("Emoji Exchange Tests", async () => {
     }
 
     // Transactions
+
+    async function createMetadataAccount(
+        pda: anchor.web3.PublicKey,
+        username: string,
+        wallet: anchor.web3.Keypair,
+    ) {
+        await program.methods.createUserMetadataAccount(
+            username, wallet.publicKey
+        )
+        .accounts({
+            metadataAccount: pda,
+            wallet: wallet.publicKey,
+        })
+        .signers([wallet])
+        .rpc();
+        usernamesList.push(username);
+        userMetadataPdasList.push(pda);
+    }
 
     async function createEmojiAccount(
         pda: anchor.web3.PublicKey,
@@ -238,6 +259,12 @@ describe("Emoji Exchange Tests", async () => {
 
     it("Test a user buying & selling one emoji", async () => {
         let testWallet = await primeNewAccount();
+        let testUsername = "user_xyz";
+        await createMetadataAccount(
+            await derivePda(testWallet.publicKey, metadataAccountSeed, testUsername),
+            testUsername,
+            testWallet
+        );
         let testEmoji = emojisList[0];
         await placeOrder(OrderType.BUY, testEmoji, 3, testWallet, masterWallet);
         await placeOrder(OrderType.SELL, testEmoji, 2, testWallet, masterWallet);
@@ -262,6 +289,12 @@ describe("Emoji Exchange Tests", async () => {
 
     it("Test a user buying & selling multiple emojis", async () => {
         let testWallet = await primeNewAccount();
+        let testUsername = "emoji_monster";
+        await createMetadataAccount(
+            await derivePda(testWallet.publicKey, metadataAccountSeed, testUsername),
+            testUsername,
+            testWallet
+        );
         let testEmoji = emojisList[6];
         await placeOrder(OrderType.BUY, testEmoji, 3, testWallet, masterWallet);
         await placeOrder(OrderType.SELL, testEmoji, 2, testWallet, masterWallet);
@@ -304,6 +337,12 @@ describe("Emoji Exchange Tests", async () => {
 
     it("Test the price action by buying lots of emojis", async () => {
         let testWallet = await primeNewAccount();
+        let testUsername = "joe";
+        await createMetadataAccount(
+            await derivePda(testWallet.publicKey, metadataAccountSeed, testUsername),
+            testUsername,
+            testWallet
+        );
         let testEmoji = emojisList[2];
         await placeOrder(OrderType.BUY, testEmoji, 12, testWallet, masterWallet);
         await printStoreBalances(masterWallet.publicKey);
@@ -331,6 +370,12 @@ describe("Emoji Exchange Tests", async () => {
 
     it("Test insufficient store emoji balance", async () => {
         let testWallet = await primeNewAccount();
+        let testUsername = "smileyguy";
+        await createMetadataAccount(
+            await derivePda(testWallet.publicKey, metadataAccountSeed, testUsername),
+            testUsername,
+            testWallet
+        );
         let testEmoji = emojisList[2];
         let masterWalletPda = await derivePda(
             masterWallet.publicKey,
@@ -349,6 +394,12 @@ describe("Emoji Exchange Tests", async () => {
 
     it("Test insufficient user emoji balance", async () => {
         let testWallet = await primeNewAccount();
+        let testUsername = "frownyclowny";
+        await createMetadataAccount(
+            await derivePda(testWallet.publicKey, metadataAccountSeed, testUsername),
+            testUsername,
+            testWallet
+        );
         let testEmoji = emojisList[2];
         let testWalletPda = await derivePda(
             testWallet.publicKey,
@@ -364,4 +415,17 @@ describe("Emoji Exchange Tests", async () => {
         assert(threwInsufficientUserBalanceError);
         assert((await program.account.userEmoji.fetch(testWalletPda)).balance < 20);
     });
+
+    it("Test resulting usernames generated in previous tests", async () => {
+        console.log("User Metadata:")
+        let checkedUsernames = [];
+        for (var pda of userMetadataPdasList) {
+            let metadata = await program.account.userMetadata.fetch(pda);
+            checkedUsernames.push(metadata.username);
+            console.log(`   ${metadata.authority.toString().substring(0, 5)} : ${metadata.username}`);
+        };
+        assert((
+            checkedUsernames.filter(a => usernamesList.indexOf(a) < 0)
+        ).length == 0);
+    })
 });

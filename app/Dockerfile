@@ -12,4 +12,6 @@ COPY . /opt/app
 
 RUN npm install --dev && npm run build
 
+EXPOSE 3000
+
 CMD [ "npm", "start" ]

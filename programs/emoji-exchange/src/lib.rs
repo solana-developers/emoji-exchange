@@ -33,6 +33,16 @@ mod emoji_exchange {
         )
     }
 
+    pub fn create_user_metadata_account(
+        ctx: Context<CreateUserMetadata>, 
+        username: String,
+        authority: Pubkey,
+    ) -> Result<()> {
+        user::create_user_metadata_account(
+            ctx, username, authority
+        )
+    }
+
     pub fn create_user_emoji_account(
         ctx: Context<CreateUserEmoji>, 
         emoji_seed: String,
