@@ -205,8 +205,8 @@ describe("Emoji Exchange Tests", async () => {
                 await program.account.masterEmoji.fetch(masterPda) != null
             );
         };
-        await printStoreBalances()
-        await printCustomerBalances()
+        await printStoreBalances();
+        await printCustomerBalances();
         
         console.log("====   Test a user buying & selling one emoji         ===");
         let testWallet = await primeNewAccount();
@@ -226,8 +226,8 @@ describe("Emoji Exchange Tests", async () => {
         );
         assert((await program.account.masterEmoji.fetch(masterWalletPda)).balance == masterStartingBalance - 2);
         assert((await program.account.userEmoji.fetch(testWalletPda)).balance == 2);
-        await printStoreBalances()
-        await printCustomerBalances()
+        await printStoreBalances();
+        await printCustomerBalances();
         
         console.log("====   Test a user buying & selling multiple emojis   ===");
         testWallet = await primeNewAccount();
@@ -246,8 +246,8 @@ describe("Emoji Exchange Tests", async () => {
         );
         assert((await program.account.masterEmoji.fetch(masterWalletPda)).balance == masterStartingBalance - 1);
         assert((await program.account.userEmoji.fetch(testWalletPda)).balance == 1);
-        await printStoreBalances()
-        await printCustomerBalances()
+        await printStoreBalances();
+        await printCustomerBalances();
         testEmoji = emojisList[3];
         await placeOrder(OrderType.BUY, testEmoji, 5, testWallet, masterWallet);
         await placeOrder(OrderType.SELL, testEmoji, 1, testWallet, masterWallet);
@@ -263,7 +263,30 @@ describe("Emoji Exchange Tests", async () => {
         );
         assert((await program.account.masterEmoji.fetch(masterWalletPda)).balance == masterStartingBalance - 4);
         assert((await program.account.userEmoji.fetch(testWalletPda)).balance == 4);
-        await printStoreBalances()
-        await printCustomerBalances()
+        await printStoreBalances();
+        await printCustomerBalances();
+
+        console.log("====   Test the price action by buying lots of emojis   ===");
+        testWallet = await primeNewAccount();
+        testEmoji = emojisList[2];
+        await placeOrder(OrderType.BUY, testEmoji, 12, testWallet, masterWallet);
+        await printStoreBalances();
+        await placeOrder(OrderType.BUY, testEmoji, 12, testWallet, masterWallet);
+        await printStoreBalances();
+        await placeOrder(OrderType.BUY, testEmoji, 14, testWallet, masterWallet);
+        await printStoreBalances();
+        await printCustomerBalances();
+        masterWalletPda = await derivePda(
+            masterWallet.publicKey,
+            masterAccountSeed,
+            testEmoji,
+        );
+        testWalletPda = await derivePda(
+            testWallet.publicKey,
+            userAccountSeed,
+            testEmoji,
+        );
+        assert((await program.account.masterEmoji.fetch(masterWalletPda)).balance == masterStartingBalance - 38);
+        assert((await program.account.userEmoji.fetch(testWalletPda)).balance == 38);
     });
 });

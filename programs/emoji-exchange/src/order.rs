@@ -14,7 +14,7 @@ pub fn place_order(
     let master_emoji = &mut ctx.accounts.master_emoji;
     let user_emoji = &mut ctx.accounts.user_emoji;
 
-    let price_action = EMOJI_STARTING_PRICE / 10 * amount as u64;
+    let price_action = EMOJI_STARTING_PRICE * amount as u64;
 
     match order_type {
         OrderType::Buy => {
