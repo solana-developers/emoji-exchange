@@ -1,4 +1,4 @@
 # emoji-exchange
-Demo application for presenting a Solana counting program
+Demo of a Solana dApp!
 
 ![](emoji_exchange.jpg)
