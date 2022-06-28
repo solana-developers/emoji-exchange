@@ -21,8 +21,17 @@ pub fn place_order(
     let price_action = EMOJI_STARTING_PRICE * amount as u64;
 
     match order_type {
+
         OrderType::Buy => {
+
             msg!("Request to buy emoji {}", &master_emoji.name);
+
+            if amount > master_emoji.balance {
+                msg!("Emoji: {}", &master_emoji.name);
+                msg!("Store balance: {}", master_emoji.balance);
+                return Err(error!(OrderError::InsufficientStoreBalance))
+            };
+
             system_program::transfer(
                 CpiContext::new(
                     ctx.accounts.system_program.to_account_info(),
@@ -33,12 +42,21 @@ pub fn place_order(
                 ),
                 emoji_price_account.price * amount as u64
             )?;
+
             master_emoji.balance -= amount;
             emoji_price_account.price += price_action;
             user_emoji.balance += amount;
         },
         OrderType::Sell => {
+
             msg!("Request to sell emoji {}", &master_emoji.name);
+
+            if amount > user_emoji.balance {
+                msg!("Emoji: {}", &user_emoji.name);
+                msg!("User balance: {}", user_emoji.balance);
+                return Err(error!(OrderError::InsufficientStoreBalance))
+            };
+
             system_program::transfer(
                 CpiContext::new(
                     ctx.accounts.system_program.to_account_info(),
@@ -49,6 +67,7 @@ pub fn place_order(
                 ),
                 emoji_price_account.price * amount as u64
             )?;
+
             master_emoji.balance += amount;
             emoji_price_account.price -= price_action;
             user_emoji.balance -= amount;
@@ -78,4 +97,12 @@ pub struct Order<'info> {
 pub enum OrderType {
     Buy,
     Sell,
+}
+
+#[error_code]
+pub enum OrderError {
+    #[msg("Insufficient store balance.")]
+    InsufficientStoreBalance,
+    #[msg("Insufficient user balance.")]
+    InsufficientUserBalance,
 }

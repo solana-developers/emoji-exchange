@@ -324,5 +324,26 @@ describe("Emoji Exchange Tests", async () => {
         );
         assert((await program.account.masterEmoji.fetch(masterWalletPda)).balance == masterStartingBalance - 13);
         assert((await program.account.userEmoji.fetch(testWalletPda)).balance == 13);
+
+        console.log("====   Test insufficient store emoji balance   ===");
+        let threwInsufficientStoreBalanceError = false;
+        try {
+            await placeOrder(OrderType.BUY, testEmoji, masterStartingBalance - 12, testWallet, masterWallet);
+        } catch (error) {
+            threwInsufficientStoreBalanceError = true;
+        };
+        assert(threwInsufficientStoreBalanceError);
+        assert((await program.account.masterEmoji.fetch(masterWalletPda)).balance < masterStartingBalance - 12);
+
+        console.log("====   Test insufficient user emoji balance   ===");
+        testEmoji = emojisList[7];
+        let threwInsufficientUserBalanceError = false;
+        try {
+            await placeOrder(OrderType.BUY, testEmoji, 20, testWallet, masterWallet);
+        } catch (error) {
+            threwInsufficientUserBalanceError = true;
+        };
+        assert(threwInsufficientUserBalanceError);
+        assert((await program.account.userEmoji.fetch(testWalletPda)).balance < 20);
     });
 });

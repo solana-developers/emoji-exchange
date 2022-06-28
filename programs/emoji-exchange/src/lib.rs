@@ -2,10 +2,12 @@ use anchor_lang::prelude::*;
 
 pub mod master;
 pub mod order;
+// pub mod price;
 pub mod user;
 
 use master::*;
 use order::*;
+// use price::*;
 use user::*;
 
 
@@ -50,4 +52,13 @@ mod emoji_exchange {
             ctx, order_type, amount
         )
     }
+
+    // pub fn change_price(
+    //     ctx: Context<ChangePrice>,
+    //     emoji_seed: String,
+    // ) -> Result<()> {
+    //     price::change_price(
+    //         ctx, emoji_seed
+    //     )
+    // }
 }
