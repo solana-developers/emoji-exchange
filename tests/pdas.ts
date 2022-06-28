@@ -1,6 +1,8 @@
 import * as anchor from "@project-serum/anchor";
-import { assert } from "chai";
 import { EmojiExchange } from "../target/types/emoji_exchange";
+import fs from 'mz/fs';
+import { assert } from "chai";
+
 
 
 describe("Emoji Exchange Tests", async () => {
@@ -30,34 +32,67 @@ describe("Emoji Exchange Tests", async () => {
     const metadataAccountSeed = "_usermetadata_";
     const masterStartingBalance = 40;
 
+    // Utils
+
     enum OrderType { 
         BUY, 
         SELL 
     };
 
+    enum MasterWalletInit {
+        GENERATE,
+        LOAD,
+    }
+
     // Helpers
 
-    function convertEnumToString(variant: OrderType) {
+    function convertOrderTypeToString(variant: OrderType) {
         if (variant == OrderType.BUY) {
             return "BUY";
         }
         return "SELL";
     };
 
-    function convertEnumToAnchorPayload(variant: OrderType) {
+    function convertOrderTypeToAnchorPayload(variant: OrderType) {
         if (variant == OrderType.BUY) {
             return { buy: {} };
         }
         return { sell: {} };
     };
 
-    async function primeNewAccount() {
+    function convertStringToMasterWalletInit(arg: string) {
+        if (arg.toUpperCase() == "GENERATE") {
+            console.log("We'll generate new wallets for this test.");
+            return MasterWalletInit.GENERATE;
+        } else if (arg.toUpperCase() == "LOAD") {
+            console.log("We'll load existing wallets for this test.");
+            return MasterWalletInit.LOAD;
+        } else {
+            let msg = "Not a valid wallet init flag: " + arg;
+            throw Error(msg);
+        }
+    }
+
+    async function loadMasterWallet(init: MasterWalletInit, filename: string) {
+        const path = "./tests/wallets/" + filename + ".json";
+        if (init == MasterWalletInit.GENERATE) {
+            return await primeNewWallet();
+        } else if (init == MasterWalletInit.LOAD) {
+            return anchor.web3.Keypair.fromSecretKey(
+                Uint8Array.from(JSON.parse(
+                    await fs.readFile(path, {encoding: 'utf8'})
+                ))
+            );
+        }
+    }
+
+    async function primeNewWallet() {
         let keypair = anchor.web3.Keypair.generate();
         await provider.connection.requestAirdrop(
             keypair.publicKey,
             2 * anchor.web3.LAMPORTS_PER_SOL
         );
-        await new Promise( resolve => setTimeout(resolve, 3 * 1000) ); // Sleep 3 s
+        await new Promise( resolve => setTimeout(resolve, 3 * 1000) ); // Sleep 3s
         return keypair;
     };
 
@@ -196,13 +231,14 @@ describe("Emoji Exchange Tests", async () => {
         );
         console.log("Placing order...");
         console.log(`   Wallet: ${wallet.publicKey}`);
-        console.log(`   Type: ${convertEnumToString(orderType)}`);
+        console.log(`   Type: ${convertOrderTypeToString(orderType)}`);
         console.log(`   Amount: ${amount}`);
         console.log(`   Emoji: ${emoji}`);
         console.log(`   User PDA: ${testWalletPda}`);
         console.log(`   Master PDA: ${masterWalletPda}`);
-        try{
-            await program.account.userEmoji.fetch(testWalletPda) === null
+        try {
+            await program.account.userEmoji.fetch(testWalletPda);
+            console.log(`** User emoji account exists with PDA: ${testWalletPda.toString().substring(0, 9)}...`);
          } catch (error) {
             await createEmojiAccount(
                 testWalletPda,
@@ -213,7 +249,7 @@ describe("Emoji Exchange Tests", async () => {
         };
         let pricePda = await derivePda(master.publicKey, priceAccountSeed, emoji);
         await program.methods.placeOrder(
-            convertEnumToAnchorPayload(orderType),
+            convertOrderTypeToAnchorPayload(orderType),
             amount
         )
         .accounts({
@@ -230,22 +266,28 @@ describe("Emoji Exchange Tests", async () => {
 
     // Tests
 
+    const MASTER_WALLET_INIT = convertStringToMasterWalletInit(process.env.MASTER_WALLET_INIT);
     let masterWallet: anchor.web3.Keypair;
 
     it("Test initialization of master PDAs", async () => {
-        masterWallet = await primeNewAccount();
+        masterWallet = await loadMasterWallet(MASTER_WALLET_INIT, "master")
         for (var emoji of emojisList) {
             let pda = await derivePda(
                 masterWallet.publicKey,
                 masterAccountSeed,
                 emoji,
             );
-            await createEmojiAccount(
-                pda,
-                masterAccountSeed,
-                emoji,
-                masterWallet,
-            );
+            try {
+                await program.account.masterEmoji.fetch(pda);
+                console.log(`** Master emoji account exists with PDA: ${pda.toString().substring(0, 9)}...`);
+             } catch (error) {
+                await createEmojiAccount(
+                    pda,
+                    masterAccountSeed,
+                    emoji,
+                    masterWallet,
+                );
+             };
         };
         for (var masterPda of masterPdasList) {
             assert(
@@ -258,7 +300,7 @@ describe("Emoji Exchange Tests", async () => {
     });
 
     it("Test a user buying & selling one emoji", async () => {
-        let testWallet = await primeNewAccount();
+        let testWallet = await primeNewWallet();
         let testUsername = "user_xyz";
         await createMetadataAccount(
             await derivePda(testWallet.publicKey, metadataAccountSeed, testUsername),
@@ -269,17 +311,11 @@ describe("Emoji Exchange Tests", async () => {
         await placeOrder(OrderType.BUY, testEmoji, 3, testWallet, masterWallet);
         await placeOrder(OrderType.SELL, testEmoji, 2, testWallet, masterWallet);
         await placeOrder(OrderType.BUY, testEmoji, 1, testWallet, masterWallet);
-        let masterWalletPda = await derivePda(
-            masterWallet.publicKey,
-            masterAccountSeed,
-            testEmoji,
-        );
         let testWalletPda = await derivePda(
             testWallet.publicKey,
             userAccountSeed,
             testEmoji,
         );
-        assert((await program.account.masterEmoji.fetch(masterWalletPda)).balance == masterStartingBalance - 2);
         assert((await program.account.userEmoji.fetch(testWalletPda)).balance == 2);
         await printStoreBalances(masterWallet.publicKey);
         await printCustomerBalances();
@@ -288,7 +324,7 @@ describe("Emoji Exchange Tests", async () => {
     });
 
     it("Test a user buying & selling multiple emojis", async () => {
-        let testWallet = await primeNewAccount();
+        let testWallet = await primeNewWallet();
         let testUsername = "emoji_monster";
         await createMetadataAccount(
             await derivePda(testWallet.publicKey, metadataAccountSeed, testUsername),
@@ -298,17 +334,11 @@ describe("Emoji Exchange Tests", async () => {
         let testEmoji = emojisList[6];
         await placeOrder(OrderType.BUY, testEmoji, 3, testWallet, masterWallet);
         await placeOrder(OrderType.SELL, testEmoji, 2, testWallet, masterWallet);
-        let masterWalletPda = await derivePda(
-            masterWallet.publicKey,
-            masterAccountSeed,
-            testEmoji,
-        );
         let testWalletPda = await derivePda(
             testWallet.publicKey,
             userAccountSeed,
             testEmoji,
         );
-        assert((await program.account.masterEmoji.fetch(masterWalletPda)).balance == masterStartingBalance - 1);
         assert((await program.account.userEmoji.fetch(testWalletPda)).balance == 1);
         await printStoreBalances(masterWallet.publicKey);
         await printCustomerBalances();
@@ -317,17 +347,11 @@ describe("Emoji Exchange Tests", async () => {
         testEmoji = emojisList[3];
         await placeOrder(OrderType.BUY, testEmoji, 5, testWallet, masterWallet);
         await placeOrder(OrderType.SELL, testEmoji, 1, testWallet, masterWallet);
-        masterWalletPda = await derivePda(
-            masterWallet.publicKey,
-            masterAccountSeed,
-            testEmoji,
-        );
         testWalletPda = await derivePda(
             testWallet.publicKey,
             userAccountSeed,
             testEmoji,
         );
-        assert((await program.account.masterEmoji.fetch(masterWalletPda)).balance == masterStartingBalance - 4);
         assert((await program.account.userEmoji.fetch(testWalletPda)).balance == 4);
         await printStoreBalances(masterWallet.publicKey);
         await printCustomerBalances();
@@ -336,7 +360,7 @@ describe("Emoji Exchange Tests", async () => {
     });
 
     it("Test the price action by buying lots of emojis", async () => {
-        let testWallet = await primeNewAccount();
+        let testWallet = await primeNewWallet();
         let testUsername = "joe";
         await createMetadataAccount(
             await derivePda(testWallet.publicKey, metadataAccountSeed, testUsername),
@@ -354,22 +378,16 @@ describe("Emoji Exchange Tests", async () => {
         await printCustomerBalances();
         await printWalletBalance(masterWallet.publicKey, "Master");
         await printWalletBalance(testWallet.publicKey, "Customer");
-        let masterWalletPda = await derivePda(
-            masterWallet.publicKey,
-            masterAccountSeed,
-            testEmoji,
-        );
         let testWalletPda = await derivePda(
             testWallet.publicKey,
             userAccountSeed,
             testEmoji,
         );
-        assert((await program.account.masterEmoji.fetch(masterWalletPda)).balance == masterStartingBalance - 13);
         assert((await program.account.userEmoji.fetch(testWalletPda)).balance == 13);
     });
 
     it("Test insufficient store emoji balance", async () => {
-        let testWallet = await primeNewAccount();
+        let testWallet = await primeNewWallet();
         let testUsername = "smileyguy";
         await createMetadataAccount(
             await derivePda(testWallet.publicKey, metadataAccountSeed, testUsername),
@@ -393,7 +411,7 @@ describe("Emoji Exchange Tests", async () => {
     });
 
     it("Test insufficient user emoji balance", async () => {
-        let testWallet = await primeNewAccount();
+        let testWallet = await primeNewWallet();
         let testUsername = "frownyclowny";
         await createMetadataAccount(
             await derivePda(testWallet.publicKey, metadataAccountSeed, testUsername),
