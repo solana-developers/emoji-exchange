@@ -1,12 +1,13 @@
 use anchor_lang::prelude::*;
 
+use crate::EMOJI_STARTING_PRICE;
+
 
 /*
 * Initialize a new PDA account to store the balance of an emoji
 */
-pub fn create_emoji_account(
-    ctx: Context<CreateEmoji>, 
-    account_type_seed: String,
+pub fn create_master_emoji_account(
+    ctx: Context<CreateMasterEmoji>, 
     emoji_seed: String,
     starting_balance: u32,
     authority: Pubkey,
@@ -15,8 +16,9 @@ pub fn create_emoji_account(
     let emoji_account = &mut ctx.accounts.emoji_account;
     emoji_account.name = emoji_seed;
     emoji_account.balance = starting_balance;
+    emoji_account.price = EMOJI_STARTING_PRICE;
     emoji_account.authority = authority;
-    msg!("Request to create {} PDA {}", &account_type_seed, &emoji_account.key());
+    msg!("Request to create _master_ PDA {}", &emoji_account.key());
     msg!("Success.");
     
     Ok(())
@@ -26,23 +28,20 @@ pub fn create_emoji_account(
 * Accounts context for creating a new emoji PDA account.
 */
 #[derive(Accounts)]
-#[instruction(
-    account_type_seed: String,
-    emoji_seed: String,
-)]
-pub struct CreateEmoji<'info> {
+#[instruction(emoji_seed: String)]
+pub struct CreateMasterEmoji<'info> {
     #[account(
         init, 
         payer = wallet, 
         space = 82,
         seeds = [
             wallet.key().as_ref(),
-            account_type_seed.as_ref(), 
+            b"_master_", 
             emoji_seed.as_ref()
         ],
         bump
     )]
-    pub emoji_account: Account<'info, Emoji>,
+    pub emoji_account: Account<'info, MasterEmoji>,
     #[account(mut)]
     pub wallet: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -52,8 +51,9 @@ pub struct CreateEmoji<'info> {
 * Emoji PDA account data.
 */
 #[account]
-pub struct Emoji {
+pub struct MasterEmoji {
     pub name: String,
     pub balance: u32,
+    pub price: u64,
     pub authority: Pubkey
 }

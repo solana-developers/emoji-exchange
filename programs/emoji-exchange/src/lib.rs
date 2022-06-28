@@ -1,26 +1,43 @@
 use anchor_lang::prelude::*;
 
-pub mod emoji;
+pub mod master;
 pub mod order;
+pub mod user;
 
-use emoji::*;
+use master::*;
 use order::*;
+use user::*;
+
 
 declare_id!("HctzMECBUu8gg4an7RjUaBXibGEcL3WD41P33JsyqwWe");
+
+
+const LAMPORTS_PER_SOL: u64 = 1000000000;
+const EMOJI_STARTING_PRICE: u64 = LAMPORTS_PER_SOL / 100;
+
 
 #[program]
 mod emoji_exchange {
     use super::*;
 
-    pub fn create_emoji_account(
-        ctx: Context<CreateEmoji>, 
-        account_type_seed: String,
+    pub fn create_master_emoji_account(
+        ctx: Context<CreateMasterEmoji>, 
         emoji_seed: String, 
         starting_balance: u32,
         authority: Pubkey,
     ) -> Result<()> {
-        emoji::create_emoji_account(
-            ctx, account_type_seed, emoji_seed, starting_balance, authority
+        master::create_master_emoji_account(
+            ctx, emoji_seed, starting_balance, authority
+        )
+    }
+
+    pub fn create_user_emoji_account(
+        ctx: Context<CreateUserEmoji>, 
+        emoji_seed: String,
+        authority: Pubkey,
+    ) -> Result<()> {
+        user::create_user_emoji_account(
+            ctx, emoji_seed, authority
         )
     }
 
