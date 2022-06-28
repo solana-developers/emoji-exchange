@@ -34,7 +34,7 @@ function convertEnumToAnchorPayload(variant: OrderType) {
 };
 
 function getRandomEmoji() {
-    return emojisList[Math.floor(Math.random() * (emojisList.length + 1))];
+    return emojisList[Math.floor(Math.random() * (emojisList.length))];
 };
 
 async function primeNewAccount() {
