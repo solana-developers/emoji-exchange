@@ -23,6 +23,7 @@ describe("Emoji Exchange Tests", async () => {
         "emoji_5", "emoji_6", "emoji_7", "emoji_8"
     ];
     const masterAccountSeed = "_master_";
+    const priceAccountSeed = "_price_";
     const userAccountSeed = "_user_";
     const masterStartingBalance = 40;
 
@@ -73,12 +74,15 @@ describe("Emoji Exchange Tests", async () => {
         return pda;
     };
 
-    async function printStoreBalances() {
+    async function printStoreBalances(masterWalletPubkey: anchor.web3.PublicKey) {
         console.log("-------------------------------------------------------------------------------");
         console.log("Store:");
-        for (var pda of masterPdasList) {
-            let data = await program.account.masterEmoji.fetch(pda);
-            console.log(`   ${data.authority.toString().substring(0, 5)} : ${data.name} : ${data.balance} : ${data.price / anchor.web3.LAMPORTS_PER_SOL} SOL`);
+        for (var emoji of emojisList) {
+            let masterPda = await derivePda(masterWalletPubkey, masterAccountSeed, emoji);
+            let masterData = await program.account.masterEmoji.fetch(masterPda);
+            let pricePda = await derivePda(masterWalletPubkey, priceAccountSeed, emoji);
+            let priceData = await program.account.emojiPrice.fetch(pricePda);
+            console.log(`   ${masterData.authority.toString().substring(0, 5)} : ${masterData.name} : ${masterData.balance} : ${priceData.price / anchor.web3.LAMPORTS_PER_SOL} SOL`);
         };
         console.log("-------------------------------------------------------------------------------");
     }
@@ -93,6 +97,14 @@ describe("Emoji Exchange Tests", async () => {
         console.log("-------------------------------------------------------------------------------");
     }
 
+    async function printWalletBalance(walletPubkey: anchor.web3.PublicKey, title: string) {
+        console.log(
+            `${title} balance: ${walletPubkey.toString().substring(0, 5)} : ${
+                (await provider.connection.getBalance(walletPubkey)) / anchor.web3.LAMPORTS_PER_SOL
+            } SOL`
+        );
+    }
+
     // Transactions
 
     async function createEmojiAccount(
@@ -101,12 +113,16 @@ describe("Emoji Exchange Tests", async () => {
         emojiSeed: string,
         wallet: anchor.web3.Keypair,
     ) {
-        console.log("Creating PDA...");
-        console.log(`   Wallet: ${wallet.publicKey}`);
-        console.log(`   Type: ${accountTypeSeed}`);
-        console.log(`   Emoji: ${emojiSeed}`);
-        console.log(`   PDA: ${pda}`);
         if (accountTypeSeed == "_master_") {
+            console.log("Creating master PDA...");
+            console.log(`   Wallet: ${wallet.publicKey}`);
+            console.log(`   Emoji: ${emojiSeed}`);
+            console.log(`   PDA: ${pda}`);
+            let pricePda = await derivePda(wallet.publicKey, priceAccountSeed, emojiSeed);
+            console.log("Also creating price PDA...");
+            console.log(`   Wallet: ${wallet.publicKey}`);
+            console.log(`   Emoji: ${emojiSeed}`);
+            console.log(`   PDA: ${pricePda}`);
             await program.methods.createMasterEmojiAccount(
                 emojiSeed,
                 masterStartingBalance,
@@ -114,12 +130,17 @@ describe("Emoji Exchange Tests", async () => {
             )
             .accounts({
                 emojiAccount: pda,
+                emojiPriceAccount: pricePda,
                 wallet: wallet.publicKey,
             })
             .signers([wallet])
             .rpc();
             masterPdasList.push(pda);
         } else {
+            console.log("Creating user PDA...");
+            console.log(`   Wallet: ${wallet.publicKey}`);
+            console.log(`   Emoji: ${emojiSeed}`);
+            console.log(`   PDA: ${pda}`);
             await program.methods.createUserEmojiAccount(
                 emojiSeed,
                 wallet.publicKey
@@ -169,14 +190,19 @@ describe("Emoji Exchange Tests", async () => {
                 wallet,
             );
         };
+        let pricePda = await derivePda(master.publicKey, priceAccountSeed, emoji);
         await program.methods.placeOrder(
             convertEnumToAnchorPayload(orderType),
             amount
         )
         .accounts({
             masterEmoji: masterWalletPda,
+            emojiPriceAccount: pricePda,
             userEmoji: testWalletPda,
+            masterWallet: master.publicKey,
+            userWallet: wallet.publicKey
         })
+        .signers([master, wallet])
         .rpc();
         console.log("Success.");
     };
@@ -205,8 +231,9 @@ describe("Emoji Exchange Tests", async () => {
                 await program.account.masterEmoji.fetch(masterPda) != null
             );
         };
-        await printStoreBalances();
+        await printStoreBalances(masterWallet.publicKey);
         await printCustomerBalances();
+        await printWalletBalance(masterWallet.publicKey, "Master");
         
         console.log("====   Test a user buying & selling one emoji         ===");
         let testWallet = await primeNewAccount();
@@ -226,8 +253,10 @@ describe("Emoji Exchange Tests", async () => {
         );
         assert((await program.account.masterEmoji.fetch(masterWalletPda)).balance == masterStartingBalance - 2);
         assert((await program.account.userEmoji.fetch(testWalletPda)).balance == 2);
-        await printStoreBalances();
+        await printStoreBalances(masterWallet.publicKey);
         await printCustomerBalances();
+        await printWalletBalance(masterWallet.publicKey, "Master");
+        await printWalletBalance(testWallet.publicKey, "Customer");
         
         console.log("====   Test a user buying & selling multiple emojis   ===");
         testWallet = await primeNewAccount();
@@ -246,8 +275,10 @@ describe("Emoji Exchange Tests", async () => {
         );
         assert((await program.account.masterEmoji.fetch(masterWalletPda)).balance == masterStartingBalance - 1);
         assert((await program.account.userEmoji.fetch(testWalletPda)).balance == 1);
-        await printStoreBalances();
+        await printStoreBalances(masterWallet.publicKey);
         await printCustomerBalances();
+        await printWalletBalance(masterWallet.publicKey, "Master");
+        await printWalletBalance(testWallet.publicKey, "Customer");
         testEmoji = emojisList[3];
         await placeOrder(OrderType.BUY, testEmoji, 5, testWallet, masterWallet);
         await placeOrder(OrderType.SELL, testEmoji, 1, testWallet, masterWallet);
@@ -263,19 +294,24 @@ describe("Emoji Exchange Tests", async () => {
         );
         assert((await program.account.masterEmoji.fetch(masterWalletPda)).balance == masterStartingBalance - 4);
         assert((await program.account.userEmoji.fetch(testWalletPda)).balance == 4);
-        await printStoreBalances();
+        await printStoreBalances(masterWallet.publicKey);
         await printCustomerBalances();
+        await printWalletBalance(masterWallet.publicKey, "Master");
+        await printWalletBalance(testWallet.publicKey, "Customer");
 
         console.log("====   Test the price action by buying lots of emojis   ===");
         testWallet = await primeNewAccount();
         testEmoji = emojisList[2];
         await placeOrder(OrderType.BUY, testEmoji, 12, testWallet, masterWallet);
-        await printStoreBalances();
-        await placeOrder(OrderType.BUY, testEmoji, 12, testWallet, masterWallet);
-        await printStoreBalances();
-        await placeOrder(OrderType.BUY, testEmoji, 14, testWallet, masterWallet);
-        await printStoreBalances();
+        await printStoreBalances(masterWallet.publicKey);
         await printCustomerBalances();
+        await printWalletBalance(masterWallet.publicKey, "Master");
+        await printWalletBalance(testWallet.publicKey, "Customer");
+        await placeOrder(OrderType.BUY, testEmoji, 1, testWallet, masterWallet);
+        await printStoreBalances(masterWallet.publicKey);
+        await printCustomerBalances();
+        await printWalletBalance(masterWallet.publicKey, "Master");
+        await printWalletBalance(testWallet.publicKey, "Customer");
         masterWalletPda = await derivePda(
             masterWallet.publicKey,
             masterAccountSeed,
@@ -286,7 +322,7 @@ describe("Emoji Exchange Tests", async () => {
             userAccountSeed,
             testEmoji,
         );
-        assert((await program.account.masterEmoji.fetch(masterWalletPda)).balance == masterStartingBalance - 38);
-        assert((await program.account.userEmoji.fetch(testWalletPda)).balance == 38);
+        assert((await program.account.masterEmoji.fetch(masterWalletPda)).balance == masterStartingBalance - 13);
+        assert((await program.account.userEmoji.fetch(testWalletPda)).balance == 13);
     });
 });

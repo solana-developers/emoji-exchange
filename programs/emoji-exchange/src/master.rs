@@ -16,8 +16,11 @@ pub fn create_master_emoji_account(
     let emoji_account = &mut ctx.accounts.emoji_account;
     emoji_account.name = emoji_seed;
     emoji_account.balance = starting_balance;
-    emoji_account.price = EMOJI_STARTING_PRICE;
     emoji_account.authority = authority;
+
+    let emoji_price_account = &mut ctx.accounts.emoji_price_account;
+    emoji_price_account.price = EMOJI_STARTING_PRICE;
+
     msg!("Request to create _master_ PDA {}", &emoji_account.key());
     msg!("Success.");
     
@@ -42,6 +45,18 @@ pub struct CreateMasterEmoji<'info> {
         bump
     )]
     pub emoji_account: Account<'info, MasterEmoji>,
+    #[account(
+        init, 
+        payer = wallet, 
+        space = 82,
+        seeds = [
+            wallet.key().as_ref(),
+            b"_price_", 
+            emoji_seed.as_ref()
+        ],
+        bump
+    )]
+    pub emoji_price_account: Account<'info, EmojiPrice>,
     #[account(mut)]
     pub wallet: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -54,6 +69,14 @@ pub struct CreateMasterEmoji<'info> {
 pub struct MasterEmoji {
     pub name: String,
     pub balance: u32,
-    pub price: u64,
     pub authority: Pubkey
+}
+
+/*
+* Emoji price PDA account data.
+*/
+#[account]
+pub struct EmojiPrice {
+    pub name: String,
+    pub price: u64,
 }
