@@ -9,11 +9,13 @@ pub fn create_emoji_account(
     account_type_seed: String,
     emoji_seed: String,
     starting_balance: u32,
+    authority: Pubkey,
 ) -> Result<()> {
     
     let emoji_account = &mut ctx.accounts.emoji_account;
     emoji_account.name = emoji_seed;
     emoji_account.balance = starting_balance;
+    emoji_account.authority = authority;
     msg!("Request to create {} PDA {}", &account_type_seed, &emoji_account.key());
     msg!("Success.");
     
@@ -32,7 +34,7 @@ pub struct CreateEmoji<'info> {
     #[account(
         init, 
         payer = wallet, 
-        space = 8 + 40,
+        space = 82,
         seeds = [
             wallet.key().as_ref(),
             account_type_seed.as_ref(), 
@@ -53,4 +55,5 @@ pub struct CreateEmoji<'info> {
 pub struct Emoji {
     pub name: String,
     pub balance: u32,
+    pub authority: Pubkey
 }

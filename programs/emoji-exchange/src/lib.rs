@@ -16,10 +16,11 @@ mod emoji_exchange {
         ctx: Context<CreateEmoji>, 
         account_type_seed: String,
         emoji_seed: String, 
-        starting_balance: u32
+        starting_balance: u32,
+        authority: Pubkey,
     ) -> Result<()> {
         emoji::create_emoji_account(
-            ctx, account_type_seed, emoji_seed, starting_balance
+            ctx, account_type_seed, emoji_seed, starting_balance, authority
         )
     }
 
