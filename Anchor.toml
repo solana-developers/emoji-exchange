@@ -11,5 +11,4 @@ cluster = "localnet"
 wallet = "/Users/joesol/.config/solana/id.json"
 
 [scripts]
-test-generate = "MASTER_WALLET_INIT=generate yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/pdas.ts"
-test-load = "MASTER_WALLET_INIT=load yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/pdas.ts"
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

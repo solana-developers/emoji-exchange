@@ -1,6 +1,7 @@
 import { FC, useCallback, useState } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { Order } from './Order';
+import { getEmojiPrice } from '../utils/service';
 
 export const EmojiExchange: FC = () => {
   const { connection } = useConnection();
@@ -24,14 +25,14 @@ export const EmojiExchange: FC = () => {
     <div className="my-6">
       {init ? 
         <div>
-          <Order emoji="😀"/>
-          <Order emoji="👻"/>
-          <Order emoji="🤡"/> 
-          <Order emoji="🤠"/>
-          <Order emoji="💸"/>
-          <Order emoji="💪"/>
-          <Order emoji="👀"/>
-          <Order emoji="👑"/>
+          <Order emojiId="emoji_1" emoji="😀" price={getEmojiPrice(publicKey, "emoji_1")}/>
+          <Order emojiId="emoji_2" emoji="👻" price={getEmojiPrice(publicKey, "emoji_2")}/>
+          <Order emojiId="emoji_3" emoji="🤡" price={getEmojiPrice(publicKey, "emoji_3")}/> 
+          <Order emojiId="emoji_4" emoji="🤠" price={getEmojiPrice(publicKey, "emoji_4")}/>
+          <Order emojiId="emoji_5" emoji="💸" price={getEmojiPrice(publicKey, "emoji_5")}/>
+          <Order emojiId="emoji_6" emoji="💪" price={getEmojiPrice(publicKey, "emoji_6")}/>
+          <Order emojiId="emoji_7" emoji="👀" price={getEmojiPrice(publicKey, "emoji_7")}/>
+          <Order emojiId="emoji_8" emoji="👑" price={getEmojiPrice(publicKey, "emoji_8")}/>
         </div> :
         <div>
           <input 

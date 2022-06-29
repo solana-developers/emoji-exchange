@@ -31,8 +31,7 @@ pub struct CreateUserMetadata<'info> {
         space = 82,
         seeds = [
             wallet.key().as_ref(),
-            b"_usermetadata_", 
-            username.as_ref()
+            b"_usermetadata"
         ],
         bump
     )]

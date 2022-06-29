@@ -2,7 +2,9 @@ import { FC, useCallback, useState } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 
 interface emojiProps {
-  emoji: string;
+  emojiId: string,
+  emoji: string,
+  price: string,
 }
 
 export const Order: FC<emojiProps> = (emojiProps: emojiProps) => {
@@ -19,6 +21,8 @@ export const Order: FC<emojiProps> = (emojiProps: emojiProps) => {
   return (
     <div>
       <span style={{fontSize: "32px"}}>{emojiProps.emoji}</span>
+
+      <span style={{fontSize: "20px", marginLeft: "1.25em", marginRight: "0.75em"}}>{emojiProps.price}</span>
 
       <input 
         type="number" 
