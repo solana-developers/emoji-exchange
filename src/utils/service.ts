@@ -1,22 +1,28 @@
 import * as anchor from "@project-serum/anchor";
 import * as constants from './const';
 import fs from 'mz/fs';
-import { EmojiExchange } from "../../../target/types/emoji_exchange";
+import { EmojiExchange } from "../../target/types/emoji_exchange";
 
 
-export const provider = anchor.AnchorProvider.env();
-anchor.setProvider(provider);
-export const program = anchor.workspace.EmojiExchange as anchor.Program<EmojiExchange>;
-
-const MASTER_WALLET = async function loadMasterWallet(filename: string) {
-    const path = "./wallet/" + filename + ".json";
-    return anchor.web3.Keypair.fromSecretKey(
-        Uint8Array.from(JSON.parse(
-            await fs.readFile(path, {encoding: 'utf8'})
-        ))
-    );
+function anchorConfigs() {
+    const provider = anchor.AnchorProvider.env();
+    anchor.setProvider(provider);
+    return provider;
 }
 
+export const provider = anchorConfigs();
+export const program = anchor.workspace.EmojiExchange as anchor.Program<EmojiExchange>;
+
+export async function loadMasterWallet() {
+    return anchor.web3.Keypair.fromSecretKey(
+        Uint8Array.from(JSON.parse(
+            await fs.readFile("./wallet/master.json", 
+                {encoding: 'utf8'}
+            )
+        ))
+    );
+    // return anchor.web3.Keypair.generate();
+}
 
 function convertOrderTypeToAnchorPayload(variant: constants.OrderType) {
     if (variant == constants.OrderType.BUY) {
@@ -67,8 +73,7 @@ export async function createMasterEmojiAccount(
     let pricePda = await derivePda(masterWallet.publicKey, constants.PRICE_ACCOUNT_SEED, emoji);
     await program.methods.createMasterEmojiAccount(
         emoji, 
-        constants.MASTER_DEFAULT_STARTING_BALANCE, 
-        masterWallet.publicKey,
+        constants.MASTER_DEFAULT_STARTING_BALANCE
     )
     .accounts({
         emojiAccount: pda,
@@ -104,25 +109,26 @@ export async function getEmojiPriceAccount(
 }
 
 export async function createUserMetadataAccount(
-    wallet: anchor.web3.Keypair,
-    username: string,
+    userPubkey: anchor.web3.PublicKey, 
+    username: string, 
+    masterWallet: anchor.web3.Keypair,
 ) {
-    let pda = await derivePda(wallet.publicKey, constants.METADATA_ACCOUNT_SEED, "");
+    let pda = await derivePda(userPubkey, constants.METADATA_ACCOUNT_SEED, "");
     await program.methods.createUserMetadataAccount(
-        username, wallet.publicKey
+        userPubkey, username
     )
     .accounts({
         metadataAccount: pda,
-        wallet: wallet.publicKey,
+        wallet: masterWallet.publicKey,
     })
-    .signers([wallet])
+    .signers([masterWallet])
     .rpc();
 }
 
 export async function getUserMetadataAccount(
-    walletPubkey: anchor.web3.PublicKey,
+    userPubkey: anchor.web3.PublicKey, 
 ) {
-    let pda = await derivePda(walletPubkey, constants.METADATA_ACCOUNT_SEED, "");
+    let pda = await derivePda(userPubkey, constants.METADATA_ACCOUNT_SEED, "");
     try {
         return await program.account.userMetadata.fetch(pda);
     } catch (e) {
@@ -131,27 +137,27 @@ export async function getUserMetadataAccount(
 }
 
 export async function createUserEmojiAccount(
-    userWallet: anchor.web3.Keypair,
-    emoji: string,
+    userPubkey: anchor.web3.PublicKey, 
+    emoji: string, 
+    masterWallet: anchor.web3.Keypair,
 ) {
-    let pda = await derivePda(userWallet.publicKey, constants.USER_ACCOUNT_SEED, emoji);
+    let pda = await derivePda(userPubkey, constants.USER_ACCOUNT_SEED, emoji);
     await program.methods.createUserEmojiAccount(
-        emoji, 
-        userWallet.publicKey,
+        userPubkey, emoji, 
     )
     .accounts({
         emojiAccount: pda,
-        wallet: userWallet.publicKey,
+        wallet: masterWallet.publicKey,
     })
-    .signers([userWallet])
+    .signers([masterWallet])
     .rpc();
 }
 
 export async function getUserEmojiAccount(
-    userWalletPubkey: anchor.web3.PublicKey,
+    userPubkey: anchor.web3.PublicKey,
     emoji: string,
 ) {
-    let pda = await derivePda(userWalletPubkey, constants.USER_ACCOUNT_SEED, emoji);
+    let pda = await derivePda(userPubkey, constants.USER_ACCOUNT_SEED, emoji);
     try {
         return await program.account.userEmoji.fetch(pda);
     } catch (e) {
@@ -169,7 +175,9 @@ export async function placeOrder(
     let masterPda = await derivePda(masterWallet.publicKey, constants.MASTER_ACCOUNT_SEED, emoji);
     let pricePda = await derivePda(masterWallet.publicKey, constants.PRICE_ACCOUNT_SEED, emoji);
     let userPda = await derivePda(userWallet.publicKey, constants.USER_ACCOUNT_SEED, emoji);
-    if (!(await userPdaExists(userPda))) { await createUserEmojiAccount(userWallet, emoji) };
+    if (!(await userPdaExists(userPda))) { 
+        await createUserEmojiAccount(userWallet.publicKey, emoji, masterWallet);
+    };
     await program.methods.placeOrder(
         convertOrderTypeToAnchorPayload(orderType),
         quantity,
@@ -222,7 +230,11 @@ export async function initializeStore(
     masterWallet: anchor.web3.Keypair,
 ) {
     for (var emoji of constants.EMOJIS_LIST) { 
-        await createMasterEmojiAccount(masterWallet, emoji);
+        try {
+            await getMasterEmojiAccount(masterWallet.publicKey, emoji.emoji);
+        } catch (e) {
+            await createMasterEmojiAccount(masterWallet, emoji.emoji);
+        }
     };
 }
 
@@ -231,8 +243,8 @@ export async function getStoreBalances(
 ) {
     let store: MasterEmojiBalance[] = [];
     for (var emoji of constants.EMOJIS_LIST) { 
-        let data = await getMasterEmojiAccount(masterWalletPubkey, emoji);
-        let priceData = await getEmojiPriceAccount(masterWalletPubkey, emoji);
+        let data = await getMasterEmojiAccount(masterWalletPubkey, emoji.emoji);
+        let priceData = await getEmojiPriceAccount(masterWalletPubkey, emoji.emoji);
         store.push(
             new MasterEmojiBalance(
                 data.name,
@@ -251,6 +263,13 @@ export async function getStoreBalanceForEmoji(
     return (await getMasterEmojiAccount(masterWalletPubkey, emoji)).balance;
 }
 
+export async function getEmojiPrice(
+    masterWalletPubkey: anchor.web3.PublicKey,
+    emoji: string,
+) {
+    return (await getEmojiPriceAccount(masterWalletPubkey, emoji)).price;
+}
+
 export async function getUserBalances(
     userWalletPubkey: anchor.web3.PublicKey,
 ) {
@@ -258,7 +277,7 @@ export async function getUserBalances(
     let metadata = await getUserMetadataAccount(userWalletPubkey);
     for (var emoji of constants.EMOJIS_LIST) { 
         try {
-            let data = await getUserEmojiAccount(userWalletPubkey, emoji);
+            let data = await getUserEmojiAccount(userWalletPubkey, emoji.emoji);
             userStore.push(
                 new UserEmojiBalance(
                     metadata.username,
@@ -299,9 +318,3 @@ export async function getAllUsernames(walletPubkeysList: anchor.web3.PublicKey[]
     };
     return usernamesList;
 };
-
-//
-
-export function getEmojiPrice(wallet: anchor.web3.PublicKey, emoji: string) {
-    return .05 + " SOL";
-}
