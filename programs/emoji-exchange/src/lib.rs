@@ -26,30 +26,29 @@ mod emoji_exchange {
         ctx: Context<CreateMasterEmoji>, 
         emoji_seed: String, 
         starting_balance: u32,
-        authority: Pubkey,
     ) -> Result<()> {
         master::create_master_emoji_account(
-            ctx, emoji_seed, starting_balance, authority
+            ctx, emoji_seed, starting_balance
         )
     }
 
     pub fn create_user_metadata_account(
         ctx: Context<CreateUserMetadata>, 
+        user_pubkey: Pubkey, 
         username: String,
-        authority: Pubkey,
     ) -> Result<()> {
         user::create_user_metadata_account(
-            ctx, username, authority
+            ctx, user_pubkey, username
         )
     }
 
     pub fn create_user_emoji_account(
         ctx: Context<CreateUserEmoji>, 
+        user_pubkey: Pubkey, 
         emoji_seed: String,
-        authority: Pubkey,
     ) -> Result<()> {
         user::create_user_emoji_account(
-            ctx, emoji_seed, authority
+            ctx, user_pubkey, emoji_seed
         )
     }
 

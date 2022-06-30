@@ -10,13 +10,12 @@ pub fn create_master_emoji_account(
     ctx: Context<CreateMasterEmoji>, 
     emoji_seed: String,
     starting_balance: u32,
-    authority: Pubkey,
 ) -> Result<()> {
     
     let emoji_account = &mut ctx.accounts.emoji_account;
     emoji_account.name = emoji_seed;
     emoji_account.balance = starting_balance;
-    emoji_account.authority = authority;
+    emoji_account.authority = ctx.accounts.wallet.key();
 
     let emoji_price_account = &mut ctx.accounts.emoji_price_account;
     emoji_price_account.price = EMOJI_STARTING_PRICE;

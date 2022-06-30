@@ -1,7 +1,7 @@
 import * as anchor from "@project-serum/anchor";
 import { assert } from "chai";
-import * as constants from '../app/src/utils/const';
-import * as service from '../app/src/utils/service';
+import * as constants from '../src/utils/const';
+import * as service from '../src/utils/service';
 
 
 const defaultAirdropLamports = 2 * anchor.web3.LAMPORTS_PER_SOL;
@@ -61,8 +61,8 @@ describe("Emoji Exchange Tests", async () => {
 
         let testWallet = testWallet1;
         await primeNewWallet(testWallet);
-        await service.createUserMetadataAccount(testWallet, "user_xyz");
-        let testEmoji = constants.EMOJIS_LIST[0];
+        await service.createUserMetadataAccount(testWallet.publicKey, "user_xyz", testMasterWallet);
+        let testEmoji = constants.EMOJIS_LIST[0].emoji;
 
         await service.placeOrder(
             testMasterWallet,
@@ -113,7 +113,7 @@ describe("Emoji Exchange Tests", async () => {
     it("Test a user buying & selling multiple emojis", async () => {
 
         let testWallet = testWallet1;
-        let testEmoji = constants.EMOJIS_LIST[1];
+        let testEmoji = constants.EMOJIS_LIST[1].emoji;
 
         await service.placeOrder(
             testMasterWallet,
@@ -145,7 +145,7 @@ describe("Emoji Exchange Tests", async () => {
         ) == 1);
         printUserBalances((await service.getUserBalances(testWallet.publicKey)));
 
-        testEmoji = constants.EMOJIS_LIST[2];
+        testEmoji = constants.EMOJIS_LIST[2].emoji;
 
         await service.placeOrder(
             testMasterWallet,
@@ -182,8 +182,8 @@ describe("Emoji Exchange Tests", async () => {
 
         let testWallet = testWallet2;
         await primeNewWallet(testWallet);
-        await service.createUserMetadataAccount(testWallet, "emoji_monster");
-        let testEmoji = constants.EMOJIS_LIST[3];
+        await service.createUserMetadataAccount(testWallet.publicKey, "emoji_monster", testMasterWallet);
+        let testEmoji = constants.EMOJIS_LIST[3].emoji;
 
         await service.placeOrder(
             testMasterWallet,
@@ -220,7 +220,7 @@ describe("Emoji Exchange Tests", async () => {
     it("Test insufficient store emoji balance", async () => {
         
         let testWallet = testWallet2;
-        let testEmoji = constants.EMOJIS_LIST[3];
+        let testEmoji = constants.EMOJIS_LIST[3].emoji;
         let threwInsufficientStoreBalanceError = false;
         try {
             await service.placeOrder(
@@ -240,7 +240,7 @@ describe("Emoji Exchange Tests", async () => {
     it("Test insufficient user emoji balance", async () => {
 
         let testWallet = testWallet2;
-        let testEmoji = constants.EMOJIS_LIST[3];
+        let testEmoji = constants.EMOJIS_LIST[3].emoji;
         let threwInsufficientUserBalanceError = false;
         try {
             await service.placeOrder(
